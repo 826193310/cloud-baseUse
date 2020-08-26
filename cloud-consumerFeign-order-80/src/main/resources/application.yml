@@ -1,0 +1,38 @@
+server:
+  port: 80
+
+spring:
+  application:
+    name: cloud-order-service
+
+eureka:
+  client:
+    fetch-registry: true # 表示是否将自己注册进eureka ， 默认为true
+    register-with-eureka: true # 是否从 eurekaServer 抓取已有的注册信息，默认为true, 单节点无所谓，集群必须设置为true才能配合 ribbon 使用负载均衡
+    service-url:
+      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7001.com:7001/eureka/
+
+feign:
+  httpclient:
+    enabled: false
+  okhttp:
+    enabled: true
+  compression:
+    request:
+      enabled: true
+      mime-types: text/xml,application/xml,application/json # 配置压缩支持的MIME TYPE
+      min-request-size: 2048  # 配置压缩数据大小的下限
+    response:
+      enabled: true # 配置响应GZIP压缩
+
+# 设置feign客户端超时时间(OpenFeign默认支持ribbon)
+ribbon:
+  # 指的是建立连接所用的时间,适用于网络状态正常的情况下,两端连接所用的时间
+  ReadTimeout: 5000
+  # 指的是建立连接后从服务器读取到可用资源所用的时间
+  ConnectTimeout: 5000
+logging:
+  level:
+    com.su.springcloud.service.GiteeFeignClient: debug
+    com.su.springcloud.service.JuejinFeignService: debug
+    com.su.springcloud.service.OrderService: debug

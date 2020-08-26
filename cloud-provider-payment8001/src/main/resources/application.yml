@@ -1,0 +1,46 @@
+server:
+  port: 8001
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain
+    min-response-size: 20
+
+spring:
+  application:
+    name: cloud-payment-service
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: jdbc:mysql://192.168.210.10:3306/cloud?characterEncoding=UTF-8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&useUnicode=true&allowMultiQueries=true&useSSL=false
+    username: root
+    password: 654321
+  devtools:
+    restart:
+      enabled: true  #设置开启热部署
+      additional-paths: src/main/java #重启目录
+      exclude: WEB-INF/**
+    freemarker:
+      cache: false    #页面不加载缓存，修改即时生效
+
+
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+eureka:
+  client:
+    fetch-registry: true # 表示是否将自己注册进eureka ， 默认为true
+    register-with-eureka: true # 是否从 eurekaServer 抓取已有的注册信息，默认为true, 单节点无所谓，集群必须设置为true才能配合 ribbon 使用负载均衡
+    service-url:
+      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7001.com:7001/eureka/
+  instance:
+    instance-id: payment8001
+    prefer-ip-address: true  # eureka 上显示IP
+#
+feign:
+  compression:
+    request:
+      enabled: true
+      mime-types: application/json,application/xml,text/html,text/xml,text/plain # 响应压缩的类型
+      min-request-size: 2048  # 压缩数据最小值（小于该值的传输不进行压缩处理）
+    response:
+      enabled: true # 配置响应GZIP压缩
