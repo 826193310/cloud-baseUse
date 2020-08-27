@@ -67,7 +67,6 @@ public class PaymentController {
     @GetMapping(value = "/payment/getInfo")
     public String getInfo(HttpServletRequest request) {
         //获取所有请求头名称， 查看是否有请求为 gzip 的
-        Enumeration<String> headerNames = request.getHeaderNames();
         StringBuffer sb = new StringBuffer();
         for (int i = 0; i < 300; i++) {
             sb.append(i).append("");
@@ -75,13 +74,9 @@ public class PaymentController {
         return sb.toString();
     }
 
-    @GetMapping(value = "/payment/timeout")
-    public String timeout() {
-        try {
-            TimeUnit.SECONDS.sleep(3);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return this.port;
+    @GetMapping(value = "/payment/getInfoId/{id}")
+    public String getInfoId(@PathVariable("id") Integer id) {
+        return this.port + "获取到的id:" + id;
     }
+
 }

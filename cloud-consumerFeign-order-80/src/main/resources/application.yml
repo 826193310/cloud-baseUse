@@ -4,15 +4,19 @@ server:
 spring:
   application:
     name: cloud-order-service
+  main:
+    allow-bean-definition-overriding: true
 
 eureka:
   client:
     fetch-registry: true # 表示是否将自己注册进eureka ， 默认为true
     register-with-eureka: true # 是否从 eurekaServer 抓取已有的注册信息，默认为true, 单节点无所谓，集群必须设置为true才能配合 ribbon 使用负载均衡
     service-url:
-      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7001.com:7001/eureka/ # eureka 集群
-
+#      defaultZone: http://eureka7002.com:7002/eureka/,http://eureka7001.com:7001/eureka/ # eureka 集群
+      defaultZone: http://eureka7001.com:7001/eureka/ # eureka 单机
 feign:
+  hystrix:
+    enabled: true # 在feign 中开启hystrix
   httpclient:
     enabled: false # 不使用默认的 httpclient 作为调用 client
   okhttp:
