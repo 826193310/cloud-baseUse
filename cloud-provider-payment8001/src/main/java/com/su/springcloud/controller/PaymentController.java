@@ -79,4 +79,8 @@ public class PaymentController {
         return this.port + "获取到的id:" + id;
     }
 
+    @GetMapping(value = "/payment/lb")
+    public String paymentLb() {
+        return port;
+    }
 }
