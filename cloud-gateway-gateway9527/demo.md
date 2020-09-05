@@ -27,6 +27,17 @@ Before 和 between 两个 Predicate 也是一致的，都是根据时间区间�
 
 常用的 Route Predicate 可以参考 https://cloud.spring.io/spring-cloud-static/Hoxton.SR1/reference/htmlsingle/#gateway-request-predicates-factories
 
+**73_GateWay的Filter**\
+-
+- 自定义Filter\
+增加 MyLogGatewayFilter 类，作为 Gateway 的 Filter
+注意： 测试完成后，我屏蔽了 MyLogGatewayFilter 中的代码，避免影响其它demo的测试
+，当需要使用的时候请放开\
+当查询的请求中不带有 uname的时候，判断为非法进入
+启动 eureka 7001, payment8001, payment8002, gateway9527
+访问 http://localhost:9527/payment/lb?uname=11，正常显示
+访问 http://localhost:9527/payment/lb 访问异常，因为没有带有参数 uname
+
 
 
 
