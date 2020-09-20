@@ -320,3 +320,347 @@ master branch, springcloud-config/config-dev.yml version=3
 2、没办法大范围自动刷新
 
 3、没办法一次通知，处处生效
+
+# 78_82 使用cloud bus + ribbitMQ 进行配置文件刷新
+
+## 先决条件
+
+使用 spring cloud bus 消息总线支持 kafka 和rabbit MQ 消息代理，我使用 rabbitMQ,安装 rabbitMQ ， 安装教程自行百度
+
+
+
+## 业务编码
+
+### cloud-config-3344
+
+#### pom
+
+```java
+<!-- 添加消息总线 rabbitMQ 支持 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+        </dependency>
+```
+
+
+
+#### application.yml 增加配置, 注意 rabbitmq 的前面是spring 的 ， 注意yml 
+
+```yaml
+spring:
+  # rabbitmq 相关配置
+  rabbitmq:
+    host: localhost
+    port: 5672 # 注意管理界面的端口和 rabbitmq 的端口的区别， 管理界面的是 15672， mq 的是 5672
+    username: guest
+    password: guest
+
+# rabbitmq 相关配置， 暴露 bus 刷新配置的断电
+management:
+  endpoints: # 暴露 bus 刷新配置的端点
+    web:
+      exposure:
+        include: "bus-refresh"
+```
+
+
+
+### cloud-config-client-3355
+
+#### pom
+
+```java
+<!-- 添加消息总线 rabbitMQ 支持 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+        </dependency>
+```
+
+### bootstrap.yml
+
+增加以下内容，注意 rabbitmq 是基于spring前缀的
+
+```yaml
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672 # 注意管理界面的端口和 rabbitmq 的端口的区别， 管理界面的是 15672， mq 的是 5672
+    username: guest
+    password: guest
+```
+
+
+
+### 基于 3355 新建 3366 项目，两个为集群项目
+
+除了端口改为3366， 其它基本一致
+
+####  pom
+
+```java
+<dependencies>
+    <!-- 添加消息总线 rabbitMQ 支持 -->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-bus-amqp</artifactId>
+    </dependency>
+    <!-- springcloud-config 依赖，如果是 client 端，只需spring-cloud-config 即可，server 端的话是 spring-cloud-config-server -->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-config</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+    </dependency>
+    <!--引入自己定义的API通用包，可以使用Payment 支付Entity-->
+    <dependency>
+        <groupId>com.su.springcloud</groupId>
+        <artifactId>cloud-api-commons</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-devtools</artifactId>
+        <scope>runtime</scope>
+        <optional>true</optional>
+    </dependency>
+
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>true</scope>
+    </dependency>
+</dependencies>
+```
+
+
+
+#### bootstrap.yml
+
+```yaml
+server:
+  port: 3366
+
+spring:
+  application:
+    name: config-client
+  cloud:
+    # config 客户端配置
+    config:
+      label: master # 分支名称
+      name: config # 配置文件名称
+      profile: dev # 读取后缀名称， 对应的就是项目的 config-dev.yml 文件的
+      uri: http://localhost:3344 # 配置中心地址
+  # rabbitmq 相关配置
+  rabbitmq:
+    host: localhost
+    port: 5672 # 注意管理界面的端口和 rabbitmq 的端口的区别， 管理界面的是 15672， mq 的是 5672
+    username: guest
+    password: guest
+
+# eureka 地址
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/
+
+# 暴露监控端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+```
+
+
+
+#### 主类 ConfigClientMain3366
+
+```
+package com.su.springcloud;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
+
+/**
+ * @Classname ConfigClientMain3366
+ * @Description ConfigClient 启动主类
+ * @Date 2020/9/19 19:19
+ * @Created by SGZ
+ */
+@SpringBootApplication
+@EnableEurekaClient  
+public class ConfigClientMain3366 {
+    public static void main(String[] args) {
+        SpringApplication.run(ConfigClientMain3366.class, args);
+    }
+}
+```
+
+
+
+#### 测试 controller 
+
+```java
+package com.su.springcloud.controller;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cloud.context.config.annotation.RefreshScope;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @Classname ConfigClientController
+ * @Description TODO
+ * @Date 2020/9/20 19:18
+ * @Created by SGZ
+ */
+@RestController
+@RefreshScope
+public class ConfigClientController {
+
+    @Value("${config.info}")
+    private String configInfo;
+
+    @Value("${server.port}")
+    private String serverPort;
+
+    /**
+     *
+     *@Description: http://localhost:3355/configInfo
+     *@param: null
+     *@Author: SGZ
+     *@Date: 2020/9/20
+     *@return:
+     *
+     **/
+    @GetMapping("/configInfo")
+    public String getConfigInfo() {
+        return "serverPort: " + serverPort + " configInfo" + configInfo;
+    }
+}
+```
+
+
+
+## 测试通过spring cloud bus + rabbitmq 刷新
+
+### 启动模块（请按照顺序启动）
+
+rabbitmq 启动
+
+ 1、eureka 7001
+
+2、configCenter3344
+
+3、config-client-3355
+
+4、config-client-3366
+
+
+
+### 访问各模块
+
+http://localhost:3355/configInfo
+
+```
+master branch, springcloud-config/config-dev.yml version=5
+```
+
+
+
+http://localhost:3366/configInfo
+
+```
+serverPort: 3366 configInfomaster branch, springcloud-config/config-dev.yml version=5
+```
+
+
+
+修改github  config-dev.yml 信息为：
+
+```
+config:
+  info: master branch, springcloud-config/config-dev.yml version=6
+```
+
+
+
+### 使用 POST 访问 config 的 bus-refresh, 对所有节点进行更新
+
+curl -X POST "http://localhost:3344/actuator/bus-refresh"
+
+
+
+### 更新所有节点后访问
+
+http://localhost:3355/configInfo
+
+```
+master branch, springcloud-config/config-dev.yml version=6
+```
+
+http://localhost:3366/configInfo
+
+```
+serverPort: 3366 configInfomaster branch, springcloud-config/config-dev.yml version=6
+```
+
+通过以上发现，通过请求  http://localhost:3344/actuator/bus-refresh 之后，两个 client 节点均已经更新配置
+
+
+
+### 使用 POST 访问 config 的 bus-refresh/{destination}, 对局部节点更新
+
+#### 修改github   config-dev.yml 
+
+修改github  config-dev.yml 信息为：
+
+```yaml
+config:
+  info: master branch, springcloud-config/config-dev.yml version=7
+```
+
+
+
+#### 只刷新 3355 节点的配置文件
+
+curl -X POST "http://localhost:3344/actuator/bus-refresh/config-client:3355"
+
+访问： http://localhost:3344/master/config-dev.yml 更新到 config-server
+
+
+
+#### 再次访问 3355  http://localhost:3355/configInfo
+
+结果：
+
+```
+master branch, springcloud-config/config-dev.yml version=7
+```
+
+
+
+#### 再次访问 3366 http://localhost:3366/configInfo
+
+结果：
+
+```
+serverPort: 3366 configInfomaster branch, springcloud-config/config-dev.yml version=6
+```
+
+
+
+看到，3355改变之后，3366并没有进行改变
+
