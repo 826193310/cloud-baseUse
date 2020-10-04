@@ -8,6 +8,11 @@ server:
 spring:
   application:
     name: cloud-payment-service
+  zipkin:
+    base-url: http://localhost:9411 # 跟踪信息汇总到 zipkin 的地址
+  sleuth:
+    sampler:
+      probability: 1 # 采样率值介于 0 到 1之间， 1 则表示全部采集
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     url: jdbc:mysql://192.168.210.10:3306/cloud?characterEncoding=UTF-8&autoReconnect=true&zeroDateTimeBehavior=convertToNull&useUnicode=true&allowMultiQueries=true&useSSL=false
