@@ -19,6 +19,15 @@ public class ConfigClientController {
     @Value("${config.info}")
     private String configInfo;
 
+    /**
+    *
+    *@Description: http://localhost:3377/config/info
+    *@param: null
+    *@Author: SGZ
+    *@Date: 2020/10/30
+    *@return:
+    *
+    **/
     @GetMapping("/config/info")
     public String getConfigInfo(){
         return configInfo;
