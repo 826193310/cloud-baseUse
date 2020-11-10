@@ -2,6 +2,7 @@ package com.su.springcloud.alibaba.controller;
 
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
 import com.alibaba.csp.sentinel.slots.block.BlockException;
+import com.su.springcloud.alibaba.service.PaymentService;
 import com.su.springcloud.entities.CommonResult;
 import com.su.springcloud.entities.Payment;
 import com.sun.deploy.security.BlockedException;
@@ -25,6 +26,9 @@ public class CricleBreakerController {
     @Autowired
     private RestTemplate restTemplate;
 
+    @Autowired
+    private PaymentService paymentService;
+
     /**
     *
     *@Description: http://localhost:84/consumer/fallback/1
@@ -41,7 +45,6 @@ public class CricleBreakerController {
     //@SentinelResource(value = "fallback", blockHandler = "blockHandler", fallback = "handlerFallback")
     // 当捕获到某些异常的时候，服务降级不进行处理，比如 IllegalArgumentException
     @SentinelResource(value = "fallback", blockHandler = "blockHandler", fallback = "handlerFallback", exceptionsToIgnore = {IllegalArgumentException.class})
-
     public CommonResult<Payment> fallback(@PathVariable("id") Long id) {
         CommonResult<Payment> result = restTemplate.getForObject(SERVER_URL + "/paymentSQL/" + id, CommonResult.class, id);
 
@@ -61,5 +64,27 @@ public class CricleBreakerController {
     public CommonResult blockHandler(@PathVariable("id") Long id, BlockException exception) {
         Payment payment = new Payment(id, null);
         return new CommonResult(889, "blockHandler-sentinel限流，无此流水, blockException:" + exception.getMessage(), payment);
+    }
+
+    /**
+    *
+    *@Description: sentinel 整合 feigin http://localhost:84/consumer/sentinel/feign/1
+    *@param: null
+    *@Author: SGZ
+    *@Date: 2020/11/10
+    *@return:
+    *
+    **/
+    @RequestMapping("/consumer/sentinel/feign/{id}")
+    @SentinelResource(value = "fallback", blockHandler = "blockHandler", fallback = "handlerFallback", exceptionsToIgnore = {IllegalArgumentException.class})
+    public CommonResult<Payment> getPaymentFeign(@PathVariable("id") Long id) {
+        CommonResult<Payment> result = paymentService.getPayment(id);
+
+        if (id == 4) {
+            throw new IllegalArgumentException("IllegalArgumentException 非法参数异常");
+        } else if (result.getData() == null) {
+            throw new NullPointerException("NullPointerException, 该ID没有对应记录，空指针异常");
+        }
+        return result;
     }
 }

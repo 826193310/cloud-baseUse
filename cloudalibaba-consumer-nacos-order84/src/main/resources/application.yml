@@ -3,7 +3,7 @@ server:
 
 spring:
   application:
-    name: cloudalibaba-sentinel-service
+    name: nacos-order-consumer
   cloud:
     nacos:
       # nacos 注册地址
@@ -22,3 +22,8 @@ management:
     web:
       exposure:
         include: '*'
+
+# 激活 sentinel 对 feigin 的支持
+feign:
+  sentinel:
+    enabled: true
