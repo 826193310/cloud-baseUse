@@ -1,8 +1,10 @@
 package com.su.springcloud.alibaba.controller;
 
 import com.alibaba.csp.sentinel.annotation.SentinelResource;
+import com.alibaba.csp.sentinel.slots.block.BlockException;
 import com.su.springcloud.entities.CommonResult;
 import com.su.springcloud.entities.Payment;
+import com.sun.deploy.security.BlockedException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,7 +36,12 @@ public class CricleBreakerController {
     **/
     @RequestMapping("/consumer/fallback/{id}")
     //@SentinelResource(value = "fallback") // 没有配置异常捕获和限流自定义处理
-    @SentinelResource(value = "fallback", fallback = "handlerFallback") // fallback 只负责业务异常
+    //@SentinelResource(value = "fallback", fallback = "handlerFallback") // fallback 只负责业务异常
+    //@SentinelResource(value = "fallback", blockHandler = "blockHandler") // blockHandler 只负责 sentinel 控制台配置违规
+    //@SentinelResource(value = "fallback", blockHandler = "blockHandler", fallback = "handlerFallback")
+    // 当捕获到某些异常的时候，服务降级不进行处理，比如 IllegalArgumentException
+    @SentinelResource(value = "fallback", blockHandler = "blockHandler", fallback = "handlerFallback", exceptionsToIgnore = {IllegalArgumentException.class})
+
     public CommonResult<Payment> fallback(@PathVariable("id") Long id) {
         CommonResult<Payment> result = restTemplate.getForObject(SERVER_URL + "/paymentSQL/" + id, CommonResult.class, id);
 
@@ -49,5 +56,10 @@ public class CricleBreakerController {
     public CommonResult handlerFallback(@PathVariable("id") Long id, Throwable e) {
         Payment payment = new Payment(id, null);
         return new CommonResult(888, "兜底异常 handlerFallback, exception内容:" + e.getMessage(), payment);
+    }
+
+    public CommonResult blockHandler(@PathVariable("id") Long id, BlockException exception) {
+        Payment payment = new Payment(id, null);
+        return new CommonResult(889, "blockHandler-sentinel限流，无此流水, blockException:" + exception.getMessage(), payment);
     }
 }
